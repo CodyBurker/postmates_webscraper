@@ -8,6 +8,13 @@ import re
 by most popular instead of delivery time, add delivery fee column to dataframe,
 update xpaths to relevant elements
 '''
+
+# the affiliated icon, 
+# restaurant name, 
+# distance to you, 
+# time to deliver, 
+# price
+
 def check_address(address):
 
     # Chrome path
@@ -27,12 +34,6 @@ def check_address(address):
     # Click button
     button.click()
     # Wait for page to load
-    time.sleep(10)
-    # Get span with text="Delivery Time"
-    # ORIGINAL: 
-    # span = driver.find_element_by_xpath("//span[text()='  Delivery time']")
-    span = driver.find_element_by_xpath("//span[text()='  Most popular']")
-    span.click()
     time.sleep(10)
     # Get list of results
     names_raw = driver.find_elements_by_xpath("//h3")
