@@ -4,17 +4,6 @@ import time
 import pandas as pd
 import re
 
-'''11/5 elise changed: f-string formatting in lines 47-49, sort results page 
-by most popular instead of delivery time, add delivery fee column to dataframe,
-update xpaths to relevant elements
-'''
-
-# the affiliated icon, 
-# restaurant name, 
-# distance to you, 
-# time to deliver, 
-# price
-
 def check_address(address):
 
     # Chrome path
@@ -51,26 +40,36 @@ def check_address(address):
     wait_times = driver.find_elements_by_xpath("//div[@class='ck ci ho']")
     # Parse wait times
     wait_times = [wait_time.text for wait_time in wait_times]
-
     # Exclude empty strings
     wait_times = [wait_time for wait_time in wait_times if wait_time != '']
+    time_pattern = re.compile(r'[0-9][0-9]?')
+    for wait_time in wait_times:
+        mins = re.findall(time_pattern, wait_time)
+        wait_times[wait_times.index(wait_time)] = mins[0] + " - " + mins[1] + " mins"
 
     delivery_fees = driver.find_elements_by_xpath("//div[@class='ck ci br']")
     delivery_fees = [fee.text for fee in delivery_fees]
     # delivery_fees = [fee for fee in delivery_fees if fee != ''] # verify that regex doesn't exclude any restaurant entries
-    delivery_fees = [re.search(r"[0-9]*[0-9].[0-9][0-9]", fee).group(0) for fee in delivery_fees if fee != '' and re.search(r"[0-9]*[0-9].[0-9][0-9]", fee)]
-    # Print length of lists
-    print('Names:{}'.format(names[0:15]))
-    print('Wait Times:{}'.format(wait_times[0:15]))
-    print('Delivery Fees:{}'.format(delivery_fees[0:15]))
-    print('Links:{}'.format(links[0:15]))
+    delivery_fees = [re.search(r"[0-9]*[0-9].?([0-9][0-9])?", fee).group(0) for fee in delivery_fees if fee != '' and re.search(r"[0-9]*[0-9].?([0-9][0-9])?", fee)]
+    # Print list samples 
+    # print('Names:{}'.format(names[0:15]))
+    # print('Wait Times:{}'.format(wait_times[0:15]))
+    # print('Delivery Fees:{}'.format(delivery_fees[0:15]))
+    # print('Links:{}'.format(links[0:15]))
+    # Print lengths of lists
     print(len(names), len(wait_times), len(delivery_fees), len(links))
 
     # print(ratings[0:15])
 
     # Combine  names, wait times, and links into a dataframe
     df = pd.DataFrame({'Name': names, 'Wait Time': wait_times, 'Delivery Fee': delivery_fees, 'Link': links})
-
+    # Remove duplicate listings
+    df.drop_duplicates(subset="Link", inplace=True)
+    # Remove listings for pickup
+    drop_links = [link for link in df.Link if re.search(r'\?deliveryMode=PICKUP$', link)]
+    df = df[~df.Link.isin(drop_links)]
+    # Save df to csv
+    df.to_csv('postmates_scrape.csv', index=False)
     # Close driver
     driver.close()
     # Return dataframe
