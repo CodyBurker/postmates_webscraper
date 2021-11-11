@@ -50,7 +50,10 @@ def check_address(address):
     delivery_fees = driver.find_elements_by_xpath("//div[@class='ck ci br']")
     delivery_fees = [fee.text for fee in delivery_fees]
     # delivery_fees = [fee for fee in delivery_fees if fee != ''] # verify that regex doesn't exclude any restaurant entries
-    delivery_fees = [re.search(r"[0-9]*[0-9].?([0-9][0-9])?", fee).group(0) for fee in delivery_fees if fee != '' and re.search(r"[0-9]*[0-9].?([0-9][0-9])?", fee)]
+    delivery_pattern = re.compile(r"[0-9]*[0-9].?([0-9][0-9])?")
+    delivery_fees = [re.search(delivery_pattern, fee).group(0) 
+                    for fee in delivery_fees 
+                    if fee != '' and re.search(delivery_pattern, fee)]
     # Print list samples 
     # print('Names:{}'.format(names[0:15]))
     # print('Wait Times:{}'.format(wait_times[0:15]))
