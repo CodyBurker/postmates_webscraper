@@ -92,7 +92,7 @@ def check_address(address):
 
 
 if __name__ == '__main__':
-    df = check_address("1 Apple Way")
+    df = check_address("2444 Dole St, Honolulu, HI 96822")
     print(df)
     # price = get_price(link)
     # print(f"Resteraunt: {df.iloc[0]['Name']}")
