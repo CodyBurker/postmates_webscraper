@@ -3,31 +3,13 @@ import os
 import time
 import pandas as pd
 import re
-import docker
-import logging
-
-import selenium
-
-# Set up logging to file
-logging.basicConfig(filename='posty2_redo.log', level=logging.DEBUG)
-
-def check_address(address, chrome_port = None):
-
-    # If on windows use chromedriver.exe
-    if os.name == 'nt':
-        chrome_path =os.path.join(os.getcwd(), 'chromedriver.exe')
-    # Else on linux use chromedriver
-    else:
-        chrome_path =os.path.join(os.getcwd(), 'chromedriver')
-    # Set up chrome driver
+def check_address(address):
     # Chrome path
-    if chrome_port is not None:
-        # Set up remote driver on port chrome_port
-        driver = webdriver.Remote()
-    else:
-        options = webdriver.ChromeOptions()
-        options.add_experimental_option('excludeSwitches', ['enable-logging'])
-        driver = webdriver.Chrome(executable_path=chrome_path, options=options)
+    chrome_path = os.path.join(os.getcwd(), 'chromedriver')
+    # Set up chrome driver
+    options = webdriver.ChromeOptions()
+    options.add_experimental_option('excludeSwitches', ['enable-logging'])
+    driver = webdriver.Chrome(executable_path=chrome_path, options=options)
     driver.get("https://postmates.com/")
     # Get element with id=location-typeahead-home-input
     element = driver.find_element_by_id("location-typeahead-home-input")
@@ -48,8 +30,6 @@ def check_address(address, chrome_port = None):
     names = []
     wait_times = []
     delivery_fees = []
-    # Log got number of elements
-    logging.info('Got %s elements' % len(elements))
     # each element is a restaurant listing
     for element in elements:
         # Get name
@@ -58,7 +38,6 @@ def check_address(address, chrome_port = None):
             names.append(name_raw[0].text)
         else:
             names.append("N/A")
-
         # Get delivery fee
         delivery_fee = element.find_elements_by_xpath(".//div[@class='ck ci br']")
         delivery_fee = [fee.text for fee in delivery_fee]
@@ -71,7 +50,6 @@ def check_address(address, chrome_port = None):
             delivery_fees.append(delivery_fee)
         else:
             delivery_fees.append("N/A")
-
         # Get wait time
         wait_time = element.find_elements_by_xpath(".//div[@class='ck ci ho']")
         wait_time = [wait.text for wait in wait_time]
@@ -83,7 +61,14 @@ def check_address(address, chrome_port = None):
                 wait_times.append("N/A")
         else:
             wait_times.append("N/A")
-
+    
+    # Print list samples 
+    # print('Names:{}'.format(names[0:15]))
+    # print('Wait Times:{}'.format(wait_times[0:15]))
+    # print('Delivery Fees:{}'.format(delivery_fees[0:15]))
+    # print('Links:{}'.format(links[0:15]))
+    # Print lengths of lists
+    # print(len(wait_times), len(delivery_fees), len(names), len(links))
     df = pd.DataFrame({'Name': names, 'Wait Time': wait_times, 'Delivery Fee': delivery_fees, 'Link': links})
     # Remove duplicate listings
     df.drop_duplicates(subset="Link", inplace=True)
@@ -91,10 +76,9 @@ def check_address(address, chrome_port = None):
     drop_links = [link for link in df.Link if re.search(r'\?deliveryMode=PICKUP$', link)]
     df = df[~df.Link.isin(drop_links)]
     # Close driver
-    # driver.close()
+    driver.close()
     # Return dataframe
     return df
-
 if __name__ == '__main__':
     start = time.time()
     # dataframe of all scraped info for all addresses
@@ -105,12 +89,14 @@ if __name__ == '__main__':
         file = file[~file['Accuracy Type'].isin(["nearest_street", "nearest_place"])]
         # compile list of addresses from file
         addresses = list(file['Number'].astype(int).astype(str)+' '+file['Street']+' '+file['City']+' '+file['State'])
+        geoids = list(file['Geoid'])
         for address in addresses[0:11]: # FOR DEV: only first 10 addresses
             # dataframe of info for only this address
             df = check_address(address)
             # add delivery address to dataframe
             df['Delivery Address'] = address
-            # append individual dataframe to collective
+            df['Geoid'] = geoids[addresses.index(address)]
+            # append individual dataframe to master
             all_address_info = all_address_info.append(df, ignore_index=True)
     print(all_address_info)
     all_address_info.to_csv('postmates_scrape.csv', index=False)
