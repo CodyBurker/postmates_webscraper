@@ -66,7 +66,7 @@ def check_address(address, chrome_port = None):
         index = [idx for idx, s in enumerate(delivery_fee) if '$' in s]
         # empty index string means there is no delivery fee listed
         if index:
-            delivery_pattern = re.compile(r"\$(.*)\s")
+            delivery_pattern = re.compile(r"([0-9]*[0-9].?([0-9][0-9])?)")
             delivery_fee = re.search(delivery_pattern, delivery_fee[index[0]]).group(0)
             delivery_fees.append(delivery_fee)
         else:
@@ -96,24 +96,27 @@ def check_address(address, chrome_port = None):
     return df
 
 if __name__ == '__main__':
-    # docker run -d -p 4444:4444 -v /dev/shm:/dev/shm selenium/standalone-chrome
-    # # Start docker container 
-    # client = docker.from_env()
-    # # Check of a container named selenium4444 exists
-    # selenium_container = client.containers.get('selenium4444')
-    # # If a container does exist, stop and remove it
-    # if selenium_container:
-    #     selenium_container.stop()
-    #     selenium_container.remove()
-    # # If container does not exist, start it
-    # if selenium_container is None:
-    #     selenium_container = client.containers.run('selenium/standalone-chrome', name='selenium4444', ports={4444: 4444}, detach=True)
-    # time.sleep(15)
-
-    df = check_address("2444 Dole St, Honolulu, HI 96822", chrome_port = 4444)
-    print(df)
-
-    # df.to_csv('postmates_scrape.csv', index=False)
+    start = time.time()
+    # dataframe of all scraped info for all addresses
+    all_address_info = pd.DataFrame()
+    with open('OAK_Berk_geocodio.csv') as csvfile:
+        file = pd.read_csv(csvfile)
+        # filter out less accurate entries (possibly without valid street addresses)
+        file = file[~file['Accuracy Type'].isin(["nearest_street", "nearest_place"])]
+        # compile list of addresses from file
+        addresses = list(file['Number'].astype(int).astype(str)+' '+file['Street']+' '+file['City']+' '+file['State'])
+        for address in addresses[0:11]: # FOR DEV: only first 10 addresses
+            # dataframe of info for only this address
+            df = check_address(address)
+            # add delivery address to dataframe
+            df['Delivery Address'] = address
+            # append individual dataframe to collective
+            all_address_info = all_address_info.append(df, ignore_index=True)
+    print(all_address_info)
+    all_address_info.to_csv('postmates_scrape.csv', index=False)
+    end = time.time()
+    time_elapsed = end-start
+    print("Runtime: ", time_elapsed)
     # price = get_price(link)
     # print(f"Resteraunt: {df.iloc[0]['Name']}")
     # print(f"Price: {price}")

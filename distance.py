@@ -1,5 +1,6 @@
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
+from selenium.common.exceptions import NoSuchElementException
 import os
 import time
 import pandas as pd
@@ -9,7 +10,7 @@ import numpy as np
 def get_distance(address, file):
     ''' Parameters -- 
     Address (string): Delivery address
-    File (Pandas DataFrame): Scraped info pertaining to address. 0-indexed. 
+    File (Pandas DataFrame): Scraped info pertaining to address. 
     
     Returns a dataframe identical to file with "Distance to Delivery" column 
         populated for address.
@@ -27,33 +28,37 @@ def get_distance(address, file):
         driver.get(link)
         time.sleep(2)
         # Enter address in pop up window for first restaurant only
-        if file.index[file.Link == link] == 0:
+        try:
             textbox = driver.find_element_by_id("location-typeahead-location-manager-input")
             textbox.send_keys(address)
             time.sleep(1)
             textbox.send_keys(Keys.RETURN)
             time.sleep(2)
-
+        except NoSuchElementException:
+            pass
         # Get distance to address from restaurant
         raw_text = driver.find_element_by_id("main-content")
         distance_pattern = re.compile(r"[0-9]*[0-9].?[0-9]?\smi\b")
-        # Save distances or N/A if no distance is listed
+        # Save distance or N/A if no distance is listed/restaurant is closed
         if re.search(distance_pattern, raw_text.text):
             distances.append(re.search(distance_pattern, raw_text.text).group(0))
         else:
             distances.append("N/A")
-    # add distances to dataframe
-    file['Distance to Delivery'] = distances
-
     # Close driver
     driver.close()
-    # Return dataframe
-    return file
+    # Return list
+    return distances
 
 if __name__ == '__main__':
     with open('postmates_scrape.csv') as csvfile:
         file = pd.read_csv(csvfile)
-        file = get_distance("2444 Dole St, Honolulu, HI 96822", file)
+        # initialize distance column
+        file['Distance'] = np.NaN
+        for address in file['Delivery Address'].unique()[0:1]: # For dev: testing one address only
+            # get distances from each restaurant to this address
+            distances = get_distance(address, file[file['Delivery Address'] == address])
+            # save those distances to file dataframe
+            file['Delivery Address' == address, 'Distance'] = distances
     print(file)
     # price = get_price(link)
     # print(f"Resteraunt: {file.iloc[0]['Name']}")
