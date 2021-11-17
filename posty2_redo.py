@@ -3,15 +3,31 @@ import os
 import time
 import pandas as pd
 import re
+import docker
+import logging
 
-def check_address(address):
+import selenium
 
-    # Chrome path
-    chrome_path = os.path.join(os.getcwd(), 'chromedriver')
+# Set up logging to file
+logging.basicConfig(filename='posty2_redo.log', level=logging.DEBUG)
+
+def check_address(address, chrome_port = None):
+
+    # If on windows use chromedriver.exe
+    if os.name == 'nt':
+        chrome_path =os.path.join(os.getcwd(), 'chromedriver.exe')
+    # Else on linux use chromedriver
+    else:
+        chrome_path =os.path.join(os.getcwd(), 'chromedriver')
     # Set up chrome driver
-    options = webdriver.ChromeOptions()
-    options.add_experimental_option('excludeSwitches', ['enable-logging'])
-    driver = webdriver.Chrome(executable_path=chrome_path, options=options)
+    # Chrome path
+    if chrome_port is not None:
+        # Set up remote driver on port chrome_port
+        driver = webdriver.Remote()
+    else:
+        options = webdriver.ChromeOptions()
+        options.add_experimental_option('excludeSwitches', ['enable-logging'])
+        driver = webdriver.Chrome(executable_path=chrome_path, options=options)
     driver.get("https://postmates.com/")
     # Get element with id=location-typeahead-home-input
     element = driver.find_element_by_id("location-typeahead-home-input")
@@ -32,6 +48,8 @@ def check_address(address):
     names = []
     wait_times = []
     delivery_fees = []
+    # Log got number of elements
+    logging.info('Got %s elements' % len(elements))
     # each element is a restaurant listing
     for element in elements:
         # Get name
@@ -65,14 +83,6 @@ def check_address(address):
                 wait_times.append("N/A")
         else:
             wait_times.append("N/A")
-    
-    # Print list samples 
-    print('Names:{}'.format(names[0:15]))
-    print('Wait Times:{}'.format(wait_times[0:15]))
-    print('Delivery Fees:{}'.format(delivery_fees[0:15]))
-    print('Links:{}'.format(links[0:15]))
-    # Print lengths of lists
-    print(len(wait_times), len(delivery_fees), len(names), len(links))
 
     df = pd.DataFrame({'Name': names, 'Wait Time': wait_times, 'Delivery Fee': delivery_fees, 'Link': links})
     # Remove duplicate listings
@@ -80,17 +90,30 @@ def check_address(address):
     # Remove listings for pickup
     drop_links = [link for link in df.Link if re.search(r'\?deliveryMode=PICKUP$', link)]
     df = df[~df.Link.isin(drop_links)]
-    print(df.shape)
-    # Save df to csv
-    df.to_csv('postmates_scrape.csv', index=False)
     # Close driver
-    driver.close()
+    # driver.close()
     # Return dataframe
-    # return df
+    return df
 
 if __name__ == '__main__':
-    df = check_address("2444 Dole St, Honolulu, HI 96822")
+    # docker run -d -p 4444:4444 -v /dev/shm:/dev/shm selenium/standalone-chrome
+    # # Start docker container 
+    # client = docker.from_env()
+    # # Check of a container named selenium4444 exists
+    # selenium_container = client.containers.get('selenium4444')
+    # # If a container does exist, stop and remove it
+    # if selenium_container:
+    #     selenium_container.stop()
+    #     selenium_container.remove()
+    # # If container does not exist, start it
+    # if selenium_container is None:
+    #     selenium_container = client.containers.run('selenium/standalone-chrome', name='selenium4444', ports={4444: 4444}, detach=True)
+    # time.sleep(15)
+
+    df = check_address("2444 Dole St, Honolulu, HI 96822", chrome_port = 4444)
     print(df)
+
+    # df.to_csv('postmates_scrape.csv', index=False)
     # price = get_price(link)
     # print(f"Resteraunt: {df.iloc[0]['Name']}")
     # print(f"Price: {price}")

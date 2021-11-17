@@ -7,11 +7,19 @@ import re
 def check_address(address):
 
     # Chrome path
-    chrome_path = os.path.join(os.getcwd(), 'chromedriver')
+    # If on windows use chromedriver.exe
+    if os.name == 'nt':
+        chrome_path =os.path.join(os.getcwd(), 'chromedriver.exe')
+    # Else on linux use chromedriver
+    else:
+        chrome_path =os.path.join(os.getcwd(), 'chromedriver')
     # Set up chrome driver
     options = webdriver.ChromeOptions()
     options.add_experimental_option('excludeSwitches', ['enable-logging'])
-    driver = webdriver.Chrome(executable_path=chrome_path, options=options)
+    # driver = webdriver.Chrome(executable_path=chrome_path, options=options)
+    # Set up remote web driver for headless chrome
+    # Defaults to localhost:4444 (docker container)
+    driver = webdriver.Remote()
     driver.get("https://postmates.com/")
     # Get element with id=location-typeahead-home-input
     element = driver.find_element_by_id("location-typeahead-home-input")
@@ -97,6 +105,7 @@ def check_address(address):
 if __name__ == '__main__':
     df = check_address("2444 Dole St, Honolulu, HI 96822")
     print(df)
+    df.to_csv('postmates_scrape.csv', index=False)
     # price = get_price(link)
     # print(f"Resteraunt: {df.iloc[0]['Name']}")
     # print(f"Price: {price}")
