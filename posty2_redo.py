@@ -113,7 +113,7 @@ def get_data(start_address, end_address):
     print(all_address_info)
     time_written = datetime.now().strftime("%m-%d-%Y %H%M%S")
     addresses = "(%d-%d)" % (start_address, end_address)
-    all_address_info.to_csv('postmates_scrape_' + time_written + addresses +  '.csv', index=False)
+    all_address_info.to_csv('scraped_data_raw/postmates_scrape_' + time_written + addresses +  '.csv', index=False)
     end = time.time()
     time_elapsed = end-start
     print("Runtime: ", time_elapsed)
@@ -121,13 +121,6 @@ def get_data(start_address, end_address):
 # Generate row numbers to send to threads
 # Given a start and end address, and batch size
 def generate_row_numbers(start_address, end_address, batch_size):
- # Create list of numbers from 0 to number of addresses counting by 10
-    # Size of each batch of addresses
-    batch_size = 3
-    # First address to start at
-    start_address = 10
-    # Last address to run to
-    end_address = 20
     # Create list starting at start_address and ending at end_address, counting by batch_size
     address_start = [start_address + i*batch_size for i in range(int((end_address-start_address)/batch_size + 1))]
     # address_start = [i*batch_size for i in range(int(start_address/batch_size), int(end_address/batch_size) + 1)]
@@ -139,14 +132,27 @@ def generate_row_numbers(start_address, end_address, batch_size):
 
 
 if __name__ == '__main__':
-    # Get lists of addresses to tell threads which to scrape
-    # Row to start at
-    # Row to end at
-    # Batch size
-    address_start, address_end = generate_row_numbers(10, 20, 3)
+
+    # Config 
+    # start_address: Row to start
+    start_address = 0
+    # end_address: Row to end at (exclusive)
+    end_address = 50
+    # batch_size: is number of addresses in each file output
+    # Each thread will only handle addresses in batches of batch_size
+    batch_size = 10
+    # max_workers: is number of threads to run at once, that is number of chrome instances
+    max_workers = 5
+
+
+    # Generate lists of addresses to scrape
+    address_start, address_end = generate_row_numbers(start_address, end_address, batch_size=batch_size)
+    print("Start Addressses:", str(address_start))
+    # Get start time
+    start_time = time.time()
 
     # Set up parallel executor to run threads
-    with concurrent.futures.ProcessPoolExecutor(max_workers=5) as executor:
+    with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
         # Set up threads with start_address and end_address (tell them which addresses to check)
         get_address_dict = {executor.submit(get_data, start_address, end_address): (start_address, end_address) for start_address, end_address in zip(address_start, address_end)}
         for future in concurrent.futures.as_completed(get_address_dict):
@@ -155,4 +161,17 @@ if __name__ == '__main__':
                future.result()
             except Exception as exc:
                 print('%r generated an exception: %s' % (start, exc))
+
+    # Print some summary of speed
+    # Print elapsted time in minutes, seconds
+    end_time = time.time()
+    time_elapsed = end_time-start_time
+    # Convert to minutes, seconds
+    minutes = int(time_elapsed/60)
+    seconds = int(time_elapsed%60)
+    print("-------")
+    print("Total Runtime: ", minutes, "minutes", seconds, "seconds")
+    # Get rate of seconds per address
+    rate = time_elapsed/end_address
+    print("Seconds per Address: ", rate)
     
