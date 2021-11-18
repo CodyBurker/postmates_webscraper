@@ -1,3 +1,4 @@
+from multiprocessing.context import Process
 from selenium import webdriver
 import os
 import time
@@ -6,9 +7,13 @@ import re
 from datetime import datetime
 from selenium.webdriver.common.by import By
 import sys
+import concurrent.futures
 def check_address(address):
-    # Chrome path
-    chrome_path = os.path.join(os.getcwd(), 'chromedriver')
+    # If windows, use chromdriver.exe otherwise use chromedriver
+    if os.name == 'nt':
+        chrome_path = os.path.join(os.getcwd(), 'chromedriver.exe')
+    else:
+        chrome_path = os.path.join(os.getcwd(), 'chromedriver')
     # Set up chrome driver
     options = webdriver.ChromeOptions()
     options.add_experimental_option('excludeSwitches', ['enable-logging'])
@@ -82,7 +87,9 @@ def check_address(address):
     driver.close()
     # Return dataframe
     return df
-if __name__ == '__main__':
+
+# Get data for list of addresses
+def get_data(start_address, end_address):
     start = time.time()
     # dataframe of all scraped info for all addresses
     all_address_info = pd.DataFrame()
@@ -93,13 +100,8 @@ if __name__ == '__main__':
         # compile list of addresses from file
         addresses = list(file['Number'].astype(int).astype(str)+' '+file['Street']+' '+file['City']+' '+file['State'])
         geoids = list(file['Geoid'])
-
-        # Get start and end indices for each chunk of addresses
-        args = sys.argv
-        print(args)
-        start_address = int(args[1])
-        end_address = int(args[2])
-        
+        if end_address > len(addresses):
+            end_address = len(addresses)
         for address in addresses[start_address:end_address]: 
             # dataframe of info for only this address
             df = check_address(address)
@@ -109,12 +111,67 @@ if __name__ == '__main__':
             # append individual dataframe to master
             all_address_info = all_address_info.append(df, ignore_index=True)
     print(all_address_info)
-    time_written = datetime.now().strftime("%m-%d-%Y %H:%M:%S")
+    time_written = datetime.now().strftime("%m-%d-%Y %H%M%S")
     addresses = "(%d-%d)" % (start_address, end_address)
-    all_address_info.to_csv('postmates_scrape_' + time_written + addresses +  '.csv', index=False)
+    all_address_info.to_csv('scraped_data_raw/postmates_scrape_' + time_written + addresses +  '.csv', index=False)
     end = time.time()
     time_elapsed = end-start
     print("Runtime: ", time_elapsed)
-    # price = get_price(link)
-    # print(f"Resteraunt: {df.iloc[0]['Name']}")
-    # print(f"Price: {price}")
+
+# Generate row numbers to send to threads
+# Given a start and end address, and batch size
+def generate_row_numbers(start_address, end_address, batch_size):
+    # Create list starting at start_address and ending at end_address, counting by batch_size
+    address_start = [start_address + i*batch_size for i in range(int((end_address-start_address)/batch_size + 1))]
+    # address_start = [i*batch_size for i in range(int(start_address/batch_size), int(end_address/batch_size) + 1)]
+    address_end = [i + batch_size for i in address_start]
+    # Replace last element iwth end_ad
+    address_end[-1] = end_address
+    return address_start, address_end
+
+
+
+if __name__ == '__main__':
+
+    # Config 
+    # start_address: Row to start
+    start_address = 0
+    # end_address: Row to end at (exclusive)
+    end_address = 50
+    # batch_size: is number of addresses in each file output
+    # Each thread will only handle addresses in batches of batch_size
+    batch_size = 10
+    # max_workers: is number of threads to run at once, that is number of chrome instances
+    max_workers = 5
+
+
+    # Generate lists of addresses to scrape
+    address_start, address_end = generate_row_numbers(start_address, end_address, batch_size=batch_size)
+    print("Start Addressses:", str(address_start))
+    # Get start time
+    start_time = time.time()
+
+    # Set up parallel executor to run threads
+    with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
+        # Set up threads with start_address and end_address (tell them which addresses to check)
+        get_address_dict = {executor.submit(get_data, start_address, end_address): (start_address, end_address) for start_address, end_address in zip(address_start, address_end)}
+        for future in concurrent.futures.as_completed(get_address_dict):
+            start = get_address_dict[future]
+            try:
+               future.result()
+            except Exception as exc:
+                print('%r generated an exception: %s' % (start, exc))
+
+    # Print some summary of speed
+    # Print elapsted time in minutes, seconds
+    end_time = time.time()
+    time_elapsed = end_time-start_time
+    # Convert to minutes, seconds
+    minutes = int(time_elapsed/60)
+    seconds = int(time_elapsed%60)
+    print("-------")
+    print("Total Runtime: ", minutes, "minutes", seconds, "seconds")
+    # Get rate of seconds per address
+    rate = time_elapsed/end_address
+    print("Seconds per Address: ", rate)
+    
