@@ -1,3 +1,4 @@
+from multiprocessing.context import Process
 from selenium import webdriver
 import os
 import time
@@ -6,6 +7,7 @@ import re
 from datetime import datetime
 from selenium.webdriver.common.by import By
 import sys
+import concurrent.futures
 def check_address(address):
     # If windows, use chromdriver.exe otherwise use chromedriver
     if os.name == 'nt':
@@ -85,7 +87,9 @@ def check_address(address):
     driver.close()
     # Return dataframe
     return df
-if __name__ == '__main__':
+
+# Get data for list of addresses
+def get_data(start_address, end_address):
     start = time.time()
     # dataframe of all scraped info for all addresses
     all_address_info = pd.DataFrame()
@@ -96,13 +100,8 @@ if __name__ == '__main__':
         # compile list of addresses from file
         addresses = list(file['Number'].astype(int).astype(str)+' '+file['Street']+' '+file['City']+' '+file['State'])
         geoids = list(file['Geoid'])
-
-        # Get start and end indices for each chunk of addresses
-        args = sys.argv
-        print(args)
-        start_address = int(args[1])
-        end_address = int(args[2])
-        
+        if end_address > len(addresses):
+            end_address = len(addresses)
         for address in addresses[start_address:end_address]: 
             # dataframe of info for only this address
             df = check_address(address)
@@ -118,6 +117,42 @@ if __name__ == '__main__':
     end = time.time()
     time_elapsed = end-start
     print("Runtime: ", time_elapsed)
-    # price = get_price(link)
-    # print(f"Resteraunt: {df.iloc[0]['Name']}")
-    # print(f"Price: {price}")
+
+# Generate row numbers to send to threads
+# Given a start and end address, and batch size
+def generate_row_numbers(start_address, end_address, batch_size):
+ # Create list of numbers from 0 to number of addresses counting by 10
+    # Size of each batch of addresses
+    batch_size = 3
+    # First address to start at
+    start_address = 10
+    # Last address to run to
+    end_address = 20
+    # Create list starting at start_address and ending at end_address, counting by batch_size
+    address_start = [start_address + i*batch_size for i in range(int((end_address-start_address)/batch_size + 1))]
+    # address_start = [i*batch_size for i in range(int(start_address/batch_size), int(end_address/batch_size) + 1)]
+    address_end = [i + batch_size for i in address_start]
+    # Replace last element iwth end_ad
+    address_end[-1] = end_address
+    return address_start, address_end
+
+
+
+if __name__ == '__main__':
+    # Get lists of addresses to tell threads which to scrape
+    # Row to start at
+    # Row to end at
+    # Batch size
+    address_start, address_end = generate_row_numbers(10, 20, 3)
+
+    # Set up parallel executor to run threads
+    with concurrent.futures.ProcessPoolExecutor(max_workers=5) as executor:
+        # Set up threads with start_address and end_address (tell them which addresses to check)
+        get_address_dict = {executor.submit(get_data, start_address, end_address): (start_address, end_address) for start_address, end_address in zip(address_start, address_end)}
+        for future in concurrent.futures.as_completed(get_address_dict):
+            start = get_address_dict[future]
+            try:
+               future.result()
+            except Exception as exc:
+                print('%r generated an exception: %s' % (start, exc))
+    
