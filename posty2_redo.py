@@ -3,6 +3,9 @@ import os
 import time
 import pandas as pd
 import re
+from datetime import datetime
+from selenium.webdriver.common.by import By
+import sys
 def check_address(address):
     # Chrome path
     chrome_path = os.path.join(os.getcwd(), 'chromedriver')
@@ -33,7 +36,7 @@ def check_address(address):
     # each element is a restaurant listing
     for element in elements:
         # Get name
-        name_raw = element.find_elements_by_xpath(".//div[@class='ba c3 bb e2 c5 dn ck ci ho']")
+        name_raw = element.find_elements(By.XPATH,"//div[@class='ba c3 bb e2 c5 dn ck ci hp']")
         if name_raw:
             names.append(name_raw[0].text)
         else:
@@ -90,7 +93,14 @@ if __name__ == '__main__':
         # compile list of addresses from file
         addresses = list(file['Number'].astype(int).astype(str)+' '+file['Street']+' '+file['City']+' '+file['State'])
         geoids = list(file['Geoid'])
-        for address in addresses[0:11]: # FOR DEV: only first 10 addresses
+
+        # Get start and end indices for each chunk of addresses
+        args = sys.argv
+        print(args)
+        start_address = int(args[1])
+        end_address = int(args[2])
+        
+        for address in addresses[start_address:end_address]: 
             # dataframe of info for only this address
             df = check_address(address)
             # add delivery address to dataframe
@@ -99,7 +109,9 @@ if __name__ == '__main__':
             # append individual dataframe to master
             all_address_info = all_address_info.append(df, ignore_index=True)
     print(all_address_info)
-    all_address_info.to_csv('postmates_scrape.csv', index=False)
+    time_written = datetime.now().strftime("%m-%d-%Y %H:%M:%S")
+    addresses = "(%d-%d)" % (start_address, end_address)
+    all_address_info.to_csv('postmates_scrape_' + time_written + addresses +  '.csv', index=False)
     end = time.time()
     time_elapsed = end-start
     print("Runtime: ", time_elapsed)
