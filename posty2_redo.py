@@ -7,8 +7,11 @@ from datetime import datetime
 from selenium.webdriver.common.by import By
 import sys
 def check_address(address):
-    # Chrome path
-    chrome_path = os.path.join(os.getcwd(), 'chromedriver')
+    # If windows, use chromdriver.exe otherwise use chromedriver
+    if os.name == 'nt':
+        chrome_path = os.path.join(os.getcwd(), 'chromedriver.exe')
+    else:
+        chrome_path = os.path.join(os.getcwd(), 'chromedriver')
     # Set up chrome driver
     options = webdriver.ChromeOptions()
     options.add_experimental_option('excludeSwitches', ['enable-logging'])
@@ -109,7 +112,7 @@ if __name__ == '__main__':
             # append individual dataframe to master
             all_address_info = all_address_info.append(df, ignore_index=True)
     print(all_address_info)
-    time_written = datetime.now().strftime("%m-%d-%Y %H:%M:%S")
+    time_written = datetime.now().strftime("%m-%d-%Y %H%M%S")
     addresses = "(%d-%d)" % (start_address, end_address)
     all_address_info.to_csv('postmates_scrape_' + time_written + addresses +  '.csv', index=False)
     end = time.time()
