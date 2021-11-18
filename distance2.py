@@ -6,6 +6,9 @@ import time
 import pandas as pd
 import re
 import numpy as np
+from geopy.distance import geodesic
+import requests
+import json
 
 def get_distance(file):
     # Chrome path
@@ -36,6 +39,22 @@ def get_distance(file):
     # Close driver
     driver.close()
     df['Restaurant Address'] = addresses
+    
+    #Forward geocoding restaurant address
+    api_key = "dd044ee1e656909e96c479030d3c087a"
+    # Forward Geocoding API Endpoint
+    query = {"access_key" : api_key, "query" : "1600 Pennsylvania Ave NW, Washington DC"}
+    response = requests.get('http://api.positionstack.com/v1/forward', params = query)
+    print(response.json())
+    #Documentation: https://positionstack.com/documentation
+    
+    # Loading the lat-long data for restaurant & delivAddress
+    restaurant = (22.5726, 88.3639)
+    delivAddress = (28.7041, 77.1025)
+    
+    # Print the distance calculated in miles
+    print(geodesic(restaurant, delivAddress).mi)
+    
     # Return dataframe
     return df
 
