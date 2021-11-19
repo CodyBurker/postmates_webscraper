@@ -93,7 +93,7 @@ def get_data(start_address, end_address):
     start = time.time()
     # dataframe of all scraped info for all addresses
     all_address_info = pd.DataFrame()
-    with open('OAK_Berk_geocodio.csv') as csvfile:
+    with open('OAK_Berk_geocodio_filtered.csv') as csvfile:
         file = pd.read_csv(csvfile)
         # filter out less accurate entries (possibly without valid street addresses)
         file = file[~file['Accuracy Type'].isin(["nearest_street", "nearest_place"])]
@@ -125,7 +125,7 @@ def generate_row_numbers(start_address, end_address, batch_size):
     address_start = [start_address + i*batch_size for i in range(int((end_address-start_address)/batch_size + 1))]
     # address_start = [i*batch_size for i in range(int(start_address/batch_size), int(end_address/batch_size) + 1)]
     address_end = [i + batch_size for i in address_start]
-    # Replace last element iwth end_ad
+    # Replace last address.
     address_end[-1] = end_address
     return address_start, address_end
 
@@ -137,12 +137,12 @@ if __name__ == '__main__':
     # start_address: Row to start
     start_address = 0
     # end_address: Row to end at (exclusive)
-    end_address = 50
+    end_address = 393
     # batch_size: is number of addresses in each file output
     # Each thread will only handle addresses in batches of batch_size
     batch_size = 10
     # max_workers: is number of threads to run at once, that is number of chrome instances
-    max_workers = 5
+    max_workers = 6
 
 
     # Generate lists of addresses to scrape
