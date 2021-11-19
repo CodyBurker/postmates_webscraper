@@ -16,9 +16,7 @@ def check_address(address):
     else:
         chrome_path = os.path.join(os.getcwd(), 'chromedriver')
     # Set up chrome driver
-    options = webdriver.ChromeOptions()
-    options.add_experimental_option('excludeSwitches', ['enable-logging'])
-    driver = webdriver.Chrome(executable_path=chrome_path, options=options)
+    driver = webdriver.Chrome(executable_path=chrome_path)
     driver.get("https://postmates.com/")
     # Get element with id=location-typeahead-home-input
     element = driver.find_element_by_id("location-typeahead-home-input")
@@ -111,13 +109,13 @@ def get_data(start_address, end_address):
             df['Geoid'] = geoids[addresses.index(address)]
             # append individual dataframe to master
             all_address_info = all_address_info.append(df, ignore_index=True)
-    print(all_address_info)
+    # print(all_address_info)
     time_written = datetime.now().strftime("%m-%d-%Y %H%M%S")
     addresses = "(%d-%d)" % (start_address, end_address)
     all_address_info.to_csv('scraped_data_raw/postmates_scrape_' + time_written + addresses +  '.csv', index=False)
     end = time.time()
     time_elapsed = end-start
-    print("Runtime: ", time_elapsed)
+    print("Runtime: ", time_elapsed, addresses)
 
 # Generate row numbers to send to threads
 # Given a start and end address, and batch size
@@ -138,13 +136,13 @@ if __name__ == '__main__':
     # start_address: Row to start
     start_address = 0
     # end_address: Row to end at (exclusive)
-    end_address = 4
+    end_address = 2
     # end_address = 3
     # batch_size: is number of addresses in each file output
     # Each thread will only handle addresses in batches of batch_size
     batch_size = 1
     # max_workers: is number of threads to run at once, that is number of chrome instances
-    max_workers = 2
+    max_workers = 393
 
 
     # Generate lists of addresses to scrape
