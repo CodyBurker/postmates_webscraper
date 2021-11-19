@@ -16,7 +16,9 @@ def check_address(address):
     else:
         chrome_path = os.path.join(os.getcwd(), 'chromedriver')
     # Set up chrome driver
-    driver = webdriver.Chrome(executable_path=chrome_path)
+    options = webdriver.ChromeOptions()
+    options.add_experimental_option('excludeSwitches', ['enable-logging'])
+    driver = webdriver.Chrome(executable_path=chrome_path, options=options)
     driver.get("https://postmates.com/")
     # Get element with id=location-typeahead-home-input
     element = driver.find_element_by_id("location-typeahead-home-input")
@@ -136,13 +138,13 @@ if __name__ == '__main__':
     # start_address: Row to start
     start_address = 0
     # end_address: Row to end at (exclusive)
-    end_address = 2
+    end_address = 393
     # end_address = 3
     # batch_size: is number of addresses in each file output
     # Each thread will only handle addresses in batches of batch_size
-    batch_size = 1
+    batch_size = 20
     # max_workers: is number of threads to run at once, that is number of chrome instances
-    max_workers = 393
+    max_workers = 6
 
 
     # Generate lists of addresses to scrape
