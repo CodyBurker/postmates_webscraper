@@ -8,6 +8,7 @@ from datetime import datetime
 from selenium.webdriver.common.by import By
 import sys
 import concurrent.futures
+from tqdm import tqdm
 def check_address(address):
     # If windows, use chromdriver.exe otherwise use chromedriver
     if os.name == 'nt':
@@ -137,12 +138,13 @@ if __name__ == '__main__':
     # start_address: Row to start
     start_address = 0
     # end_address: Row to end at (exclusive)
-    end_address = 393
+    end_address = 4
+    # end_address = 3
     # batch_size: is number of addresses in each file output
     # Each thread will only handle addresses in batches of batch_size
-    batch_size = 10
+    batch_size = 1
     # max_workers: is number of threads to run at once, that is number of chrome instances
-    max_workers = 6
+    max_workers = 2
 
 
     # Generate lists of addresses to scrape
@@ -151,17 +153,20 @@ if __name__ == '__main__':
     # Get start time
     start_time = time.time()
 
-    # Set up parallel executor to run threads
-    with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
-        # Set up threads with start_address and end_address (tell them which addresses to check)
-        get_address_dict = {executor.submit(get_data, start_address, end_address): (start_address, end_address) 
-                            for start_address, end_address in zip(address_start, address_end)}
-        for future in concurrent.futures.as_completed(get_address_dict):
-            start = get_address_dict[future]
-            try:
-               future.result()
-            except Exception as exc:
-                print('%r generated an exception: %s' % (start, exc))
+    with tqdm(total=len(address_start)) as pbar:
+        # Set up parallel executor to run threads
+        with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
+            # Set up threads with start_address and end_address (tell them which addresses to check)
+            get_address_dict = {executor.submit(get_data, start_address, end_address): (start_address, end_address) 
+                                for start_address, end_address in zip(address_start, address_end)}
+            for future in concurrent.futures.as_completed(get_address_dict):
+                start = get_address_dict[future]
+                try:
+                    future.result()
+                except Exception as exc:
+                    print('%r generated an exception: %s' % (start, exc))
+                else:
+                    pbar.update(1)
 
     # Print some summary of speed
     # Print elapsted time in minutes, seconds
