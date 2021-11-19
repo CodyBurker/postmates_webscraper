@@ -41,7 +41,7 @@ def check_address(address):
     # each element is a restaurant listing
     for element in elements:
         # Get name
-        name_raw = element.find_elements(By.XPATH,"//div[@class='ba c3 bb e2 c5 dn ck ci hp']")
+        name_raw = element.find_elements(By.XPATH,".//div[@class='ba c3 bb e2 c5 dn ck ci hp']")
         if name_raw:
             names.append(name_raw[0].text)
         else:
@@ -154,7 +154,8 @@ if __name__ == '__main__':
     # Set up parallel executor to run threads
     with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
         # Set up threads with start_address and end_address (tell them which addresses to check)
-        get_address_dict = {executor.submit(get_data, start_address, end_address): (start_address, end_address) for start_address, end_address in zip(address_start, address_end)}
+        get_address_dict = {executor.submit(get_data, start_address, end_address): (start_address, end_address) 
+                            for start_address, end_address in zip(address_start, address_end)}
         for future in concurrent.futures.as_completed(get_address_dict):
             start = get_address_dict[future]
             try:
