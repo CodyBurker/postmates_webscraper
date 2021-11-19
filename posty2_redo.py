@@ -59,7 +59,7 @@ def check_address(address):
         else:
             delivery_fees.append("N/A")
         # Get wait time
-        wait_time = element.find_elements_by_xpath(".//div[@class='ck ci ho']")
+        wait_time = element.find_elements_by_xpath(".//div[@class='ck ci hp']")
         wait_time = [wait.text for wait in wait_time]
         # Leaves "Currently unavailable" and "Too far to deliver" as possible values
         if wait_time:
