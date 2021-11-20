@@ -138,7 +138,7 @@ if __name__ == '__main__':
     # start_address: Row to start
     start_address = 0
     # end_address: Row to end at (exclusive)
-    end_address = 393
+    end_address  = 393
     # end_address = 3
     # batch_size: is number of addresses in each file output
     # Each thread will only handle addresses in batches of batch_size
