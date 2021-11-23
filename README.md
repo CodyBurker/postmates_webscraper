@@ -18,6 +18,7 @@
 # Notebooks
 * `process_raw_data.ipynb`: Used to combine multiple CSVs from 
 * `Filter_Geocodio.ipynb`: Used to filter `OAK_Berk_geocodio.csv` into valid addresses in `OAK_Berk_geocodio_filtered.csv`.
+* `cody_analysis.ipynb`: Attempt at linking `joined_wDistance.csv` to `holc_grade.csv` 
 
 # Aux Files
 * `chromedriver`: Used for selenium Mac
